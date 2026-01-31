@@ -3,23 +3,38 @@ from crewai import Agent, Crew, Process, Task, LLM
 from crewai.mcp import MCPServerStdio
 
 # --- 1. Setup The LLMs ---
+
+llm_gemini = LLM(
+    model="gemini/gemini-2.5-flash",
+    api_key=os.getenv("GEMINI_API_KEY")
+)
+
+
+
 llm_smart = LLM(
-    model="gemini/gemini-2.5-flash-lite", 
-    api_key=os.getenv("GOOGLE_API_KEY")
+    model="groq/groq/compound", 
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
 )
 
 llm_fast=LLM(
-    model= "groq/llama-3.1-8b-instant",
+    model= "groq/llama-3.3-70b-versatile",
     api_key=os.getenv("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
     
 )
 
-# llm_write=LLM(
-#     model="groq/qwen3-32b",
-#     api_key=os.getenv("GROQ_API_KEY"),
-#     base_url="https://api.groq.com/openai/v1"
-# )
+llm_AR=LLM(
+    model= "groq/meta-llama/llama-4-maverick-17b-128e-instruct",
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
+
+llm_write=LLM(
+    model="groq/meta-llama/llama-4-maverick-17b-128e-instruct",
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
 
 
 # --- 2. Setup MCP Servers (Dual Connection) ---
@@ -47,7 +62,7 @@ manager = Agent(
     backstory="You are a seasoned research director.",
     llm=llm_smart,
     verbose=True,
-    max_rpm=2
+    max_rpm=15
 )
 
 # Agent 2: The Web Researcher (Uses Brave)
@@ -56,21 +71,22 @@ web_researcher = Agent(
     goal="Find deep, verifiable information on the internet.",
     backstory="You are an expert at finding hidden gems of information.",
     mcps=[brave_mcp], # Connected to Brave
-    llm=llm_smart, 
+    llm=llm_fast, 
     verbose=True,
-    max_rpm=2
+    max_rpm=15
 )
 
 # Agent 3: The Academic Researcher (NEW AGENT!)
 # This agent specializes in reading the scientific papers
 academic_researcher = Agent(
     role="Academic Researcher",
-    goal="Find and analyze scientific papers and technical publications.",
+    goal="Find and analyze top 10 scientific papers and technical publications.",
     backstory="You are a PhD researcher who loves reading ArXiv papers.",
     mcps=[academic_mcp], # Connected to our Custom Python MCP
-    llm=llm_smart,
+    llm=llm_gemini,
     verbose=True,
-    max_rpm=2
+    max_rpm=4
+
 )
 
 # Agent 4: The Writer
@@ -78,9 +94,9 @@ writer = Agent(
     role="Technical Writer",
     goal="Synthesize research into a clear, professional markdown report.",
     backstory="You are a technical writer who creates easy-to-read reports.",
-    llm=llm_smart,
+    llm=llm_write,
     verbose=True,
-    max_rpm=2
+    max_rpm=15
 )
 
 # --- 4. The Crew Setup Function ---
