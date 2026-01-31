@@ -1,0 +1,21 @@
+# .gitignore
+
+# Environment Variables (CRITICAL)
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv
+venv/
+env/
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db

@@ -1,0 +1,10 @@
+fastapi>=0.110.0
+uvicorn>=0.27.0
+python-dotenv
+# The Core Framework
+crewai[tools,mcp]>=0.51.0
+# The Brains (Pinned to be compatible with CrewAI's underlying logic)
+langchain-google-genai
+langchain-groq
+langchain-core>=0.2.0
+litellm
