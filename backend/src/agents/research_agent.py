@@ -31,7 +31,7 @@ llm_AR=LLM(
 )
 
 llm_write=LLM(
-    model="groq/meta-llama/llama-4-maverick-17b-128e-instruct",
+    model="groq/meta-llama/llama-4-scout-17b-16e-instruct",
     api_key=os.getenv("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
 )
