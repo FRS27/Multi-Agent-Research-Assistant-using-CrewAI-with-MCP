@@ -1,22 +1,39 @@
 import os
 from dotenv import load_dotenv
-load_dotenv()  # Load environment variables FIRST
+load_dotenv()
 
 import uuid
 from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
-# Import agents
 from src.agents.research_agent import create_research_crew
 
 app = FastAPI(title="Multi-Agent Research Backend")
 
+# ---------------------------------------------------------
+# ✅ FIXED CORS (Allows Flutter Web to call backend)
+# ---------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],          # Allow all origins (Flutter Web)
+    allow_credentials=True,
+    allow_methods=["*"],          # <-- CRITICAL: Allows OPTIONS requests
+    allow_headers=["*"],
+)
+
+# ---------------------------------------------------------
+# Job Storage
+# ---------------------------------------------------------
 jobs = {}
 
 class ResearchRequest(BaseModel):
     topic: str
 
+# ---------------------------------------------------------
+# Background Task
+# ---------------------------------------------------------
 def run_crew_task(job_id: str, topic: str):
     try:
         print(f"[{job_id}] Starting research on: {topic}")
@@ -30,6 +47,9 @@ def run_crew_task(job_id: str, topic: str):
         jobs[job_id]["status"] = "failed"
         jobs[job_id]["result"] = str(e)
 
+# ---------------------------------------------------------
+# Routes
+# ---------------------------------------------------------
 @app.get("/")
 def health_check():
     return {"status": "online", "system": "Cloud-Ready"}
@@ -45,7 +65,7 @@ def start_research(request: ResearchRequest, background_tasks: BackgroundTasks):
     background_tasks.add_task(run_crew_task, job_id, request.topic)
     return {
         "job_id": job_id,
-        "message": "Research started. Use GET /research/{job_id} to check progress."
+        "message": "Research started. Poll /research/{job_id} for updates."
     }
 
 @app.get("/research/{job_id}")
@@ -54,8 +74,10 @@ def get_research_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
     return jobs[job_id]
 
+# ---------------------------------------------------------
+# Run Server
+# ---------------------------------------------------------
 if __name__ == "__main__":
-    # This prints a clickable link in the terminal
     print("\n---------------------------------------------------------")
     print("🚀 Server is running! Open this link to control the agents:")
     print("👉 http://localhost:8000/docs")
