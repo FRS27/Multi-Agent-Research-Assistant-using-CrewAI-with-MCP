@@ -18,14 +18,14 @@ llm_smart = LLM(
 )
 
 llm_fast=LLM(
-    model= "groq/llama-3.3-70b-versatile",
+    model= "groq/llama-3.1-8b-instant",
     api_key=os.getenv("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
     
 )
 
 llm_AR=LLM(
-    model= "groq/meta-llama/llama-4-maverick-17b-128e-instruct",
+    model= "groq/meta-llama/llama-4-scout-17b-16e-instruct",
     api_key=os.getenv("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
 )
@@ -83,7 +83,7 @@ academic_researcher = Agent(
     goal="Find and analyze top 10 scientific papers and technical publications.",
     backstory="You are a PhD researcher who loves reading ArXiv papers.",
     mcps=[academic_mcp], # Connected to our Custom Python MCP
-    llm=llm_gemini,
+    llm=llm_AR,
     verbose=True,
     max_rpm=4
 
