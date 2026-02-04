@@ -1,14 +1,65 @@
 import os
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.mcp import MCPServerStdio
+import time
+from collections import defaultdict, deque
 
+# Simple token rate limiter
+class SimpleTPMLimiter:
+    def __init__(self):
+        self.usage = defaultdict(deque)  # model -> [(timestamp, tokens)]
+        self.limits = {
+            'groq/groq/compound': 60000,
+            'groq/llama-3.3-70b-versatile': 10000,
+            'groq/groq/compound-mini': 14000,
+            'groq/meta-llama/llama-4-scout-17b-16e-instruct': 25000,
+            'gemini/gemini-2.5-flash': 15000,
+        }
+    
+    def wait_if_needed(self, model, estimated_tokens=500):
+        limit = self.limits.get(model, 5000)
+        now = time.time()
+        
+        # Remove old entries (older than 60 seconds)
+        self.usage[model] = deque([
+            (ts, tok) for ts, tok in self.usage[model] 
+            if now - ts < 60
+        ])
+        
+        # Calculate current usage
+        current = sum(tok for _, tok in self.usage[model])
+        
+        # If would exceed limit, wait
+        if current + estimated_tokens > limit:
+            wait_time = 61 - (now - self.usage[model][0][0]) if self.usage[model] else 1
+            print(f"⏳ Rate limit: waiting {wait_time:.1f}s for {model}")
+            time.sleep(wait_time)
+            self.usage[model].clear()
+        
+        # Record usage
+        self.usage[model].append((now, estimated_tokens))
+
+_limiter = SimpleTPMLimiter()
+
+# Monkey-patch LLM to add rate limiting
+original_llm_init = LLM.__init__
+def rate_limited_init(self, *args, **kwargs):
+    original_llm_init(self, *args, **kwargs)
+    original_call = self.call
+    
+    def wrapped_call(*call_args, **call_kwargs):
+        _limiter.wait_if_needed(self.model)
+        return original_call(*call_args, **call_kwargs)
+    
+    self.call = wrapped_call
+
+LLM.__init__ = rate_limited_init
 # --- 1. Setup The LLMs ---
 
 llm_gemini = LLM(
     model="gemini/gemini-2.5-flash",
     api_key=os.getenv("GEMINI_API_KEY")
 )
-
 
 
 llm_smart = LLM(
@@ -18,14 +69,14 @@ llm_smart = LLM(
 )
 
 llm_fast=LLM(
-    model= "groq/llama-3.1-8b-instant",
+    model= "groq/llama-3.3-70b-versatile",
     api_key=os.getenv("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
     
 )
 
 llm_AR=LLM(
-    model= "groq/meta-llama/llama-4-scout-17b-16e-instruct",
+    model= "groq/groq/compound-mini",
     api_key=os.getenv("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
 )
@@ -83,7 +134,7 @@ academic_researcher = Agent(
     goal="Find and analyze top 10 scientific papers and technical publications.",
     backstory="You are a PhD researcher who loves reading ArXiv papers.",
     mcps=[academic_mcp], # Connected to our Custom Python MCP
-    llm=llm_AR,
+    llm=llm_gemini,
     verbose=True,
     max_rpm=4
 
